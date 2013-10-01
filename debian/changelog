@@ -1,0 +1,5 @@
+heat-cfntools (1.2.5-1) unstable; urgency=low
+
+  * Initial Release. (Closes: #725064)
+
+ -- gustavo panizzo <gfa@zumbi.com.ar>  Tue, 24 Sep 2013 11:35:29 -0300

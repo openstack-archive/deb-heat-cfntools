@@ -7,10 +7,10 @@ Build-Depends: python-setuptools (>= 0.6b3), debhelper (>= 9), python-pbr (>= 0.
 Standards-Version: 3.9.4
 Homepage: https://wiki.openstack.org/Heat
 
-
 Package: heat-cfntools
 Architecture: all
 Depends: ${misc:Depends}, ${python:Depends}
+Pre-Depends: dpkg (>= 1.15.6~)
 Description: Tools required to be installed on Heat provisioned cloud
  This package contains tools for use with CloudFormation
  cfn-init   - Reads the AWS::CloudFormation::Init for the instance resource,

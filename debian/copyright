@@ -10,7 +10,7 @@ Files: tools/lintstack.py
 Copyright: 2012, AT&T Labs, Yun Mao <yunmao@gmail.com>
 License: Apache-2
 
-Files: doc/source/_static/nature.css 
+Files: doc/source/_static/nature.css
 Copyright: 2007-2011 by the Sphinx team
 License: BSD
 
@@ -61,4 +61,3 @@ License: Apache-2
  .
  On Debian-based systems the full text of the Apache version 2.0 license
  can be found in `/usr/share/common-licenses/Apache-2.0'.
-

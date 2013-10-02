@@ -3,7 +3,15 @@ Maintainer: PKG OpenStack <openstack-devel@lists.alioth.debian.org>
 Uploaders: gustavo panizzo <gfa@zumbi.com.ar>, Thomas Goirand <zigo@debian.org>
 Section: python
 Priority: optional
-Build-Depends: python-setuptools (>= 0.6b3), debhelper (>= 9), python-pbr (>= 0.5.16), python-pbr (<= 0.6), python-psutil (>= 1.0), python-boto (>= 2.5.2), python (>= 2.6), python-sphinx, openstack-pkg-tools
+Build-Depends: debhelper (>= 9),
+               openstack-pkg-tools,
+               python (>= 2.6),
+               python-boto (>= 2.5.2),
+               python-pbr (<= 0.6),
+               python-pbr (>= 0.5.16),
+               python-psutil (>= 1.0),
+               python-setuptools (>= 0.6b3),
+               python-sphinx
 Standards-Version: 3.9.4
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/heat-cfntools.git;a=summary
 Vcs-Git: git://anonscm.debian.org/openstack/heat-cfntools.git

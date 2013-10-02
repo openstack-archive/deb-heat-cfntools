@@ -12,7 +12,7 @@ override_dh_auto_build:
 override_dh_auto_clean:
 	rm -rf docs/build
 
-override_dh_installdocs:
+override_dh_installman:
 	make -C doc man
 	dh_installman doc/build/man/*
-
+	

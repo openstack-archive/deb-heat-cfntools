@@ -213,11 +213,6 @@ class RpmHelper(object):
         _rpm_util = rpmupdates.Updates([], [])
 
     @classmethod
-    def prepcache(cls):
-        """Prepare the yum cache."""
-        CommandRunner("yum -y makecache").run()
-
-    @classmethod
     def compare_rpm_versions(cls, v1, v2):
         """Compare two RPM version strings.
 
@@ -290,7 +285,7 @@ class RpmHelper(object):
                    e.g., httpd-2.2.22
                    e.g., httpd-2.2.22-1.fc16
         """
-        cmd_str = "yum -C -y --showduplicates list available %s" % pkg
+        cmd_str = "yum -y --showduplicates list available %s" % pkg
         command = CommandRunner(cmd_str).run()
         return command.status == 0
 
@@ -417,8 +412,6 @@ class PackagesHandler(object):
         # collect pkgs for batch processing at end
         installs = []
         downgrades = []
-        # update yum cache
-        RpmHelper.prepcache()
         for pkg_name, versions in packages.iteritems():
             ver = RpmHelper.newest_rpm_version(versions)
             pkg = "%s-%s" % (pkg_name, ver) if ver else pkg_name
@@ -853,15 +846,6 @@ class CommandsHandler(object):
         cwd = None
         env = properties.get("env", None)
 
-        if "test" in properties:
-            test_status = CommandRunner(properties["test"]).run().status
-            if test_status != 0:
-                LOG.info("%s test returns false, skipping command"
-                         % command_label)
-                return
-            else:
-                LOG.debug("%s test returns true, proceeding" % command_label)
-
         if "cwd" in properties:
             cwd = os.path.expanduser(properties["cwd"])
             if not os.path.exists(cwd):
@@ -869,11 +853,23 @@ class CommandsHandler(object):
                           "%s path does not exist" % cwd)
                 return
 
+        if "test" in properties:
+            test = CommandRunner(properties["test"])
+            test_status = test.run('root', cwd, env).status
+            if test_status != 0:
+                LOG.info("%s test returns false, skipping command"
+                         % command_label)
+                return
+            else:
+                LOG.debug("%s test returns true, proceeding" % command_label)
+
         if "command" in properties:
             try:
-                # TODO(pfreund) aws doc : "Either an array or a string
-                # specifying the command to run" Need the array.
-                command = CommandRunner(properties["command"])
+                command = properties["command"]
+                if isinstance(command, list):
+                    escape = lambda x: '"%s"' % x.replace('"', '\\"')
+                    command = ' '.join(map(escape, command))
+                command = CommandRunner(command)
                 command.run('root', cwd, env)
                 command_status = command.status
             except OSError as e:
@@ -1179,9 +1175,47 @@ class Metadata(object):
     def __str__(self):
         return json.dumps(self._metadata)
 
-    def display(self):
-        if self._metadata is not None:
+    def display(self, key=None):
+        """Print the metadata to the standard output stream. By default the
+        full metadata is displayed but the ouptut can be limited to a specific
+        with the <key> argument.
+
+        Arguments:
+            key -- the metadata's key to display, nested keys can be specified
+                   separating them by the dot character.
+                        e.g., "foo.bar"
+                   If the key contains a dot, it should be surrounded by single
+                   quotes
+                        e.g., "foo.'bar.1'"
+        """
+        if self._metadata is None:
+            return
+
+        if key is None:
             print(str(self))
+            return
+
+        value = None
+        md = self._metadata
+        while True:
+            key_match = re.match(r'^(?:(?:\'([^\']+)\')|([^\.]+))(?:\.|$)',
+                                 key)
+            if not key_match:
+                break
+
+            k = key_match.group(1) or key_match.group(2)
+            if isinstance(md, dict) and k in md:
+                key = key.replace(key_match.group(), '')
+                value = md = md[k]
+            else:
+                break
+
+        if key != '':
+            value = None
+
+        if value is not None:
+            print(json.dumps(value))
+
         return
 
     def _is_valid_metadata(self):

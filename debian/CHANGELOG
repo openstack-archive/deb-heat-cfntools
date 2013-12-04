@@ -1,3 +1,110 @@
+commit e8d2522397ea6b4384607017c9cafb6f3130f5a2
+Author: Steven Dake <sdake@redhat.com>
+Date:   Sat Oct 5 17:24:46 2013 -0700
+
+    Use on-demand yum metadata caching in cfn-init
+    
+    Use on-demand yum metadata caching to avoid downloading
+    50MB (Fedora 19) of extra metadata that is not necessary
+    for correct cfn-init operation.
+    
+    Reduces time to orchestration by about 23% and cpu
+    utilization by about 50%.
+    
+    Full detailed analsys in the launchpad bug.
+    
+    Change-Id: Id51d6d506d6051b5e83f550ef318f86d84f3c7a7
+    Closes-Bug: 1235824
+
+commit 1f275c21115ee34a4862ca281a7384634df0c5b0
+Author: Steven Hardy <shardy@redhat.com>
+Date:   Wed Oct 2 08:10:33 2013 +0100
+
+    cfn-hup manpage fix s/deamon/daemon typo
+    
+    Change-Id: I3b7082fd2c1c7c13c9d6db824f8e7011544bd7e3
+
+commit 63d70cd0ec142167f3d5b9865332158c55f1da07
+Author: Simon Pasquier <simon.pasquier@bull.net>
+Date:   Mon Sep 9 15:26:47 2013 +0200
+
+    Implement -k option for cfn-get-metadata
+    
+    The -k argument can be a top-level key or a nested key in which case
+    the keys are separated by dots (eg "foo.bar"). In case a key contains a
+    dot character, it needs to be surrounded by single quotes (eg
+    "foo.'bar.1'.fred).
+    If the -k option is not provided, the command prints out the full
+    metadata structure as before.
+    
+    Change-Id: Ib05d39672086001b83e8d7f56bc42cc4ba75751c
+    Fixes: bug #1183299
+
+commit ed5365dffed660abd5d90d09225b9355d99c5662
+Merge: 1a66c0c f40e4b7
+Author: Jenkins <jenkins@review.openstack.org>
+Date:   Sun Sep 8 14:43:05 2013 +0000
+
+    Merge "Change cfn-signal option --exit to --exit-code"
+
+commit f40e4b783c8fbb7024e54131cf69cc1892e572c0
+Author: JUN JIE NAN <nanjj@cn.ibm.com>
+Date:   Tue Sep 3 17:51:28 2013 +0800
+
+    Change cfn-signal option --exit to --exit-code
+    
+    According cfn user guide, the long option of cfn-signal -e should be
+    --exit-code.
+    
+    Fixes bug #1220080
+    
+    Change-Id: Id4e9feefd387a744f5e933aa4e9ea8a6f6f02a7c
+
+commit 1a66c0c7910f1f05718cd345a4cfdb6f82d329c0
+Author: JUN JIE NAN <nanjj@cn.ibm.com>
+Date:   Tue Sep 3 21:16:35 2013 +0800
+
+    Add argparse into requirements
+    
+    Add argparse into requirements.txt and heat_cfntools.egg-info
+    requires.txt
+    
+    Fixes bug #1220071
+    
+    Change-Id: I6147a8f14ac110d8dcdc1643ced5d32594322041
+
+commit 2044ef239d59ba8b3c29172ffca99cb3070a6359
+Author: JUN JIE NAN <nanjj@cn.ibm.com>
+Date:   Tue Aug 13 11:19:38 2013 +0800
+
+    Support array values in command
+    
+    Description of command in CFN User Guide:
+    
+    Either an array or a string specifying the command to run. If you use
+    an array, you do not need to escape space characters or enclose
+    command parameters in quotes.
+    
+    So we escape double quote first, and enclose each array value in
+    double quote.
+    
+    Fixes bug #1211605
+    
+    Change-Id: I28ecdb0d4b8a12690dddeac4e2398264c6d6f212
+
+commit 5b83c132a325538c8eae283074d7bbf6e80fb5fe
+Author: JUN JIE NAN <nanjj@cn.ibm.com>
+Date:   Tue Aug 13 10:49:55 2013 +0800
+
+    Pass cwd and env to test command
+    
+    Promote get cwd before test command running and pass cwd to test
+    command.
+    
+    Fixes bug #1211606
+    
+    Change-Id: I2e4d3258f6d591d3d0aadffcefa36487c9122023
+
 commit 01705b8b33ce944276e85969e769fa293c8689e3
 Author: Steve Baker <sbaker@redhat.com>
 Date:   Wed Aug 7 12:54:08 2013 +1200

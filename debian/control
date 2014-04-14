@@ -7,7 +7,6 @@ Build-Depends: debhelper (>= 9),
                openstack-pkg-tools,
                python (>= 2.6),
                python-boto (>= 2.5.2),
-               python-pbr (<= 0.6),
                python-pbr (>= 0.5.16),
                python-psutil (>= 1.0),
                python-setuptools (>= 0.6b3),
@@ -19,7 +18,11 @@ Homepage: https://wiki.openstack.org/Heat
 
 Package: heat-cfntools
 Architecture: all
-Depends: ${misc:Depends}, ${python:Depends}
+Depends: python-boto (>= 2.5.2),
+         python-pbr (>= 0.5.16),
+         python-psutil,
+         ${misc:Depends},
+         ${python:Depends}
 Pre-Depends: dpkg (>= 1.15.6~)
 Description: Tools required to be installed on Heat provisioned cloud
  This package contains tools for use with CloudFormation

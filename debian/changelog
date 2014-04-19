@@ -1,5 +1,6 @@
-heat-cfntools (1.2.6-2) UNRELEASED; urgency=low
+heat-cfntools (1.2.7-1) unstable; urgency=medium
 
+  * New upstream release.
   * Fixed (build-)depends.
 
  -- Thomas Goirand <zigo@debian.org>  Mon, 14 Apr 2014 23:01:58 +0800

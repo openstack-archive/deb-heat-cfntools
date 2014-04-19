@@ -17,7 +17,7 @@
 import boto.cloudformation as cfn
 import fixtures
 import json
-import mox
+from mox3 import mox
 import os
 import subprocess
 import tempfile
@@ -71,6 +71,58 @@ class TestCommandRunner(MockPopenTestCase):
             'CommandRunner:\n\tcommand: /bin/command2\n\tstatus: -1\n'
             '\tstdout: Doing something\n\tstderr: error',
             str(cmd2))
+        self.m.VerifyAll()
+
+
+class TestPackages(MockPopenTestCase):
+
+    def test_rpm_install(self):
+        install_list = []
+        for pack in ('httpd', 'wordpress', 'mysql-server'):
+            self.mock_cmd_run(['su', 'root', '-c',
+                               'rpm -q %s' % pack]).AndReturn(
+                                   FakePOpen(returncode=1))
+            self.mock_cmd_run(
+                ['su', 'root', '-c',
+                 'yum -y --showduplicates list available %s' % pack]) \
+                .AndReturn(FakePOpen(returncode=0))
+            install_list.append(pack)
+
+        self.mock_cmd_run(
+            ['su', 'root', '-c',
+             'yum -y install %s' % ' '.join(install_list)]) \
+            .AndReturn(FakePOpen(returncode=0))
+
+        self.m.ReplayAll()
+        packages = {
+            "yum": {
+                "mysql-server": [],
+                "httpd": [],
+                "wordpress": []
+            }
+        }
+
+        cfn_helper.PackagesHandler(packages).apply_packages()
+        self.m.VerifyAll()
+
+    def test_apt_install(self):
+        install_list = 'httpd wordpress mysql-server'
+        cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -y install'
+
+        self.mock_cmd_run(['su', 'root', '-c',
+                           '%s %s' % (cmd, install_list)]).AndReturn(
+                               FakePOpen(returncode=0))
+        self.m.ReplayAll()
+
+        packages = {
+            "apt": {
+                "mysql-server": [],
+                "httpd": [],
+                "wordpress": []
+            }
+        }
+
+        cfn_helper.PackagesHandler(packages).apply_packages()
         self.m.VerifyAll()
 
 
@@ -445,7 +497,7 @@ class TestCfnHelper(testtools.TestCase):
             metadata_info.write(content)
             metadata_info.flush()
             port = cfn_helper.metadata_server_port(metadata_info.name)
-            self.assertEquals(value, port)
+            self.assertEqual(value, port)
 
     def test_metadata_server_port(self):
         self._check_metadata_content("http://172.20.42.42:8000\n", 8000)
@@ -469,8 +521,8 @@ class TestCfnHelper(testtools.TestCase):
 
     def test_metadata_server_nofile(self):
         random_filename = self.getUniqueString()
-        self.assertEquals(None,
-                          cfn_helper.metadata_server_port(random_filename))
+        self.assertEqual(None,
+                         cfn_helper.metadata_server_port(random_filename))
 
     def test_to_boolean(self):
         self.assertTrue(cfn_helper.to_boolean(True))
@@ -748,18 +800,6 @@ class TestMetadataRetrieve(testtools.TestCase):
         finally:
             m.UnsetStubs()
 
-    def test_cfn_init(self):
-
-        with tempfile.NamedTemporaryFile(mode='w+') as foo_file:
-            md_data = {"AWS::CloudFormation::Init": {"config": {"files": {
-                foo_file.name: {"content": "bar"}}}}}
-
-            md = cfn_helper.Metadata('teststack', None)
-            self.assertTrue(
-                md.retrieve(meta_str=md_data, last_path=self.last_file))
-            md.cfn_init()
-            self.assertThat(foo_file.name, ttm.FileContains('bar'))
-
     def test_nova_meta_with_cache(self):
         meta_in = {"uuid": "f9431d18-d971-434d-9044-5b38f5b4646f",
                    "availability_zone": "nova",
@@ -906,6 +946,80 @@ class TestMetadataRetrieve(testtools.TestCase):
         tags = md.get_tags()
         self.assertEqual(tags_expect, tags)
         self.m.VerifyAll()
+
+    def test_get_instance_id(self):
+        self.m = mox.Mox()
+        self.addCleanup(self.m.UnsetStubs)
+
+        uuid = "f9431d18-d971-434d-9044-5b38f5b4646f"
+        md_data = {"uuid": uuid,
+                   "availability_zone": "nova",
+                   "hostname": "as-wikidatabase-4ykioj3lgi57.novalocal",
+                   "launch_index": 0,
+                   "public_keys": {"heat_key": "ssh-rsa etc...\n"},
+                   "name": "as-WikiDatabase-4ykioj3lgi57"}
+
+        md = cfn_helper.Metadata('teststack', None)
+
+        self.m.StubOutWithMock(md, 'get_nova_meta')
+        md.get_nova_meta().AndReturn(md_data)
+        self.m.ReplayAll()
+
+        self.assertEqual(md.get_instance_id(), uuid)
+        self.m.VerifyAll()
+
+
+class TestCfnInit(MockPopenTestCase):
+
+    def setUp(self):
+        super(TestCfnInit, self).setUp()
+        self.tdir = self.useFixture(fixtures.TempDir())
+        self.last_file = os.path.join(self.tdir.path, 'last_metadata')
+
+    def test_cfn_init(self):
+
+        with tempfile.NamedTemporaryFile(mode='w+') as foo_file:
+            md_data = {"AWS::CloudFormation::Init": {"config": {"files": {
+                foo_file.name: {"content": "bar"}}}}}
+
+            md = cfn_helper.Metadata('teststack', None)
+            self.assertTrue(
+                md.retrieve(meta_str=md_data, last_path=self.last_file))
+            md.cfn_init()
+            self.assertThat(foo_file.name, ttm.FileContains('bar'))
+
+    def test_cfn_init_with_ignore_errors_false(self):
+        self.mock_cmd_run(['su', 'root', '-c', '/bin/command1']).AndReturn(
+            FakePOpen('Doing something', 'error', -1))
+        self.m.ReplayAll()
+
+        md_data = {"AWS::CloudFormation::Init": {"config": {"commands": {
+            "00_foo": {"command": "/bin/command1",
+                       "ignoreErrors": "false"}}}}}
+
+        md = cfn_helper.Metadata('teststack', None)
+        self.assertTrue(
+            md.retrieve(meta_str=md_data, last_path=self.last_file))
+        self.assertRaises(cfn_helper.CommandsHandlerRunError, md.cfn_init)
+
+    def test_cfn_init_with_ignore_errors_true(self):
+        self.mock_cmd_run(['su', 'root', '-c', '/bin/command1']).AndReturn(
+            FakePOpen('Doing something', 'error', -1))
+        self.mock_cmd_run(['su', 'root', '-c', '/bin/command2']).AndReturn(
+            FakePOpen('All good'))
+        self.m.ReplayAll()
+
+        md_data = {"AWS::CloudFormation::Init": {"config": {"commands": {
+            "00_foo": {"command": "/bin/command1",
+                       "ignoreErrors": "true"},
+            "01_bar": {"command": "/bin/command2",
+                       "ignoreErrors": "false"}
+        }}}}
+
+        md = cfn_helper.Metadata('teststack', None)
+        self.assertTrue(
+            md.retrieve(meta_str=md_data, last_path=self.last_file))
+        md.cfn_init()
 
 
 class TestSourcesHandler(MockPopenTestCase):

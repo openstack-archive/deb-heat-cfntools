@@ -43,7 +43,7 @@ parser.add_argument('-d', '--data',
 parser.add_argument('-i', '--id',
                     dest="unique_id",
                     help="the unique id to send back to the WaitCondition",
-                    default='00000',
+                    default=None,
                     required=False)
 parser.add_argument('-e', '--exit-code',
                     dest="exit_code",
@@ -60,13 +60,12 @@ parser.add_argument('url',
 args = parser.parse_args()
 
 log_format = '%(levelname)s [%(asctime)s] %(message)s'
-logging.basicConfig(format=log_format, level=logging.DEBUG)
+log_file_name = "/var/log/cfn-signal.log"
+logging.basicConfig(filename=log_file_name,
+                    format=log_format,
+                    level=logging.DEBUG)
 
 LOG = logging.getLogger('cfntools')
-log_file_name = "/var/log/cfn-signal.log"
-file_handler = logging.FileHandler(log_file_name)
-file_handler.setFormatter(logging.Formatter(log_format))
-LOG.addHandler(file_handler)
 
 LOG.debug('cfn-signal called %s ' % (str(args)))
 if args.exit:
@@ -81,14 +80,27 @@ else:
     if args.success == 'true':
         status = 'SUCCESS'
 
+unique_id = args.unique_id
+if unique_id is None:
+    LOG.debug('No id passed from the command line')
+    md = cfn_helper.Metadata('not-used', None)
+    unique_id = md.get_instance_id()
+    if unique_id is None:
+        LOG.error('Could not get the instance id from metadata!')
+        import socket
+        unique_id = socket.getfqdn()
+LOG.debug('id: %s' % (unique_id))
+
 body = {
     "Status": status,
     "Reason": args.reason,
-    "UniqueId": args.unique_id,
+    "UniqueId": unique_id,
     "Data": args.data
 }
 
 cmd_str = "curl -X PUT -H \'Content-Type:\' --data-binary \'%s\' \"%s\"" % \
     (cfn_helper.json.dumps(body), args.url)
 command = cfn_helper.CommandRunner(cmd_str).run()
+if command.status != 0:
+    LOG.error(command.stderr)
 sys.exit(command.status)

@@ -188,8 +188,10 @@ class CommandRunner(object):
         self._stdout = output[0]
         self._stderr = output[1]
         if self._status:
-            LOG.debug("Return code of %d after executing: '%s'" % (
-                self._status, cmd))
+            LOG.debug("Return code of %d after executing: '%s'\n"
+                      "stdout: '%s'\n"
+                      "stderr: '%s'" % (self._status, cmd, self._stdout,
+                                        self._stderr))
         if self._next:
             self._next.run()
         return self
@@ -429,10 +431,10 @@ class PackagesHandler(object):
                     installs.append(pkg)
                 elif rc > 0:
                     downgrades.append(pkg)
-            if installs:
-                RpmHelper.install(installs, rpms=False)
-            if downgrades:
-                RpmHelper.downgrade(downgrades)
+        if installs:
+            RpmHelper.install(installs, rpms=False)
+        if downgrades:
+            RpmHelper.downgrade(downgrades)
 
     def _handle_rpm_packages(self, packages):
         """Handle installation, upgrade, or downgrade of packages via rpm.
@@ -827,6 +829,10 @@ def metadata_server_port(
         return None
 
 
+class CommandsHandlerRunError(Exception):
+    pass
+
+
 class CommandsHandler(object):
 
     def __init__(self, commands):
@@ -885,14 +891,12 @@ class CommandsHandler(object):
         if command_status == 0:
             LOG.info("%s has been successfully executed" % command_label)
         else:
-            if "ignoreErrors" in properties:
-                if properties["ignoreErrors"] == "false":
-                    LOG.error("%s has failed. Not ignoring" % command_label)
-                else:
-                    LOG.info("%s has failed. Explicit ignoring"
-                             % command_label)
+            if "ignoreErrors" in properties and \
+               to_boolean(properties["ignoreErrors"]):
+                LOG.info("%s has failed (status=%d). Explicit ignoring"
+                         % (command_label, command_status))
             else:
-                LOG.error("%s has failed." % command_label)
+                raise CommandsHandlerRunError("%s has failed." % command_label)
 
 
 class GroupsHandler(object):
@@ -1075,6 +1079,14 @@ class Metadata(object):
         except IOError:
             pass
         return None
+
+    def get_instance_id(self):
+        """Get the unique identifier for this server."""
+        instance_id = None
+        md = self.get_nova_meta()
+        if md is not None:
+            instance_id = md.get('uuid')
+        return instance_id
 
     def get_tags(self):
         """Get the tags for this server."""

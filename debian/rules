@@ -16,3 +16,14 @@ override_dh_installman:
 	make -C doc man
 	dh_installman doc/build/man/*
 	
+override_dh_auto_test:
+ifeq (,$(findstring nocheck, $(DEB_BUILD_OPTIONS)))
+	rm -rf .testrepository
+	testr init
+	set -e && \
+		TEMP_REZ=`mktemp -t` && \
+		PYTHONPATH=$(CURDIR) testr run --subunit | tee $$TEMP_REZ | subunit2pyunit || true ; \
+		cat $$TEMP_REZ | subunit-filter -s --no-passthrough | subunit-stats || true ; \
+		rm -f $$TEMP_REZ ;
+	testr slowest
+endif

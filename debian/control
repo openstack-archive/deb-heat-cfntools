@@ -6,11 +6,17 @@ Priority: optional
 Build-Depends: debhelper (>= 9),
                openstack-pkg-tools,
                python (>= 2.6),
-               python-boto (>= 2.5.2),
-               python-pbr (>= 0.5.16),
-               python-psutil (>= 1.0),
+               python-pbr (>= 0.6),
                python-setuptools (>= 0.6b3),
                python-sphinx
+Build-Depends-Indep: python-boto (>= 2.12.0),
+                     python-hacking (>= 0.8.0),
+                     python-mox3,
+                     python-psutil (>= 1.1.1),
+                     python-subunit (>= 0.0.18),
+                     python-testtools (>= 0.9.32),
+                     subunit (>= 0.0.18),
+                     testrepository (>= 0.0.18)
 Standards-Version: 3.9.4
 Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/heat-cfntools.git;a=summary
 Vcs-Git: git://anonscm.debian.org/openstack/heat-cfntools.git
@@ -18,9 +24,9 @@ Homepage: https://wiki.openstack.org/Heat
 
 Package: heat-cfntools
 Architecture: all
-Depends: python-boto (>= 2.5.2),
-         python-pbr (>= 0.5.16),
-         python-psutil,
+Depends: python-boto (>= 2.12.0),
+         python-pbr (>= 0.6),
+         python-psutil (>= 1.1.1),
          ${misc:Depends},
          ${python:Depends}
 Pre-Depends: dpkg (>= 1.15.6~)

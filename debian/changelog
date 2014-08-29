@@ -1,3 +1,9 @@
+heat-cfntools (1.2.8-1) unstable; urgency=medium
+
+  * New upstream release. 
+
+ -- gustavo panizzo <gfa@zumbi.com.ar>  Fri, 29 Aug 2014 11:55:41 -0300
+
 heat-cfntools (1.2.7-1) unstable; urgency=medium
 
   * New upstream release.

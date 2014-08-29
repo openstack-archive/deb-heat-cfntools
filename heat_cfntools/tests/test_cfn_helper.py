@@ -46,6 +46,10 @@ class MockPopenTestCase(testtools.TestCase):
         return subprocess.Popen(
             command, cwd=cwd, env=env, stderr=-1, stdout=-1)
 
+    def mock_unorder_cmd_run(self, command, cwd=None, env=None):
+        return subprocess.Popen(
+            command, cwd=cwd, env=env, stderr=-1, stdout=-1).InAnyOrder()
+
     def setUp(self):
         super(MockPopenTestCase, self).setUp()
         self.m = mox.Mox()
@@ -76,22 +80,23 @@ class TestCommandRunner(MockPopenTestCase):
 
 class TestPackages(MockPopenTestCase):
 
-    def test_rpm_install(self):
+    def test_yum_install(self):
         install_list = []
         for pack in ('httpd', 'wordpress', 'mysql-server'):
-            self.mock_cmd_run(['su', 'root', '-c',
-                               'rpm -q %s' % pack]).AndReturn(
-                                   FakePOpen(returncode=1))
-            self.mock_cmd_run(
+            self.mock_unorder_cmd_run(
+                ['su', 'root', '-c', 'rpm -q %s' % pack]) \
+                .AndReturn(FakePOpen(returncode=1))
+            self.mock_unorder_cmd_run(
                 ['su', 'root', '-c',
                  'yum -y --showduplicates list available %s' % pack]) \
                 .AndReturn(FakePOpen(returncode=0))
             install_list.append(pack)
 
-        self.mock_cmd_run(
-            ['su', 'root', '-c',
-             'yum -y install %s' % ' '.join(install_list)]) \
-            .AndReturn(FakePOpen(returncode=0))
+        # This mock call corresponding to 'su root -c yum -y install .*'
+        # But there is no way to ignore the order of the parameters, so only
+        # check the return value.
+        self.mock_cmd_run(mox.IgnoreArg()).AndReturn(FakePOpen(
+            returncode=0))
 
         self.m.ReplayAll()
         packages = {
@@ -105,13 +110,43 @@ class TestPackages(MockPopenTestCase):
         cfn_helper.PackagesHandler(packages).apply_packages()
         self.m.VerifyAll()
 
-    def test_apt_install(self):
-        install_list = 'httpd wordpress mysql-server'
-        cmd = 'DEBIAN_FRONTEND=noninteractive apt-get -y install'
+    def test_zypper_install(self):
+        install_list = []
+        for pack in ('httpd', 'wordpress', 'mysql-server'):
+            self.mock_unorder_cmd_run(
+                ['su', 'root', '-c', 'rpm -q %s' % pack]) \
+                .AndReturn(FakePOpen(returncode=1))
+            self.mock_unorder_cmd_run(
+                ['su', 'root', '-c',
+                 'zypper -n --no-refresh search %s' % pack]) \
+                .AndReturn(FakePOpen(returncode=0))
+            install_list.append(pack)
 
-        self.mock_cmd_run(['su', 'root', '-c',
-                           '%s %s' % (cmd, install_list)]).AndReturn(
-                               FakePOpen(returncode=0))
+        # This mock call corresponding to 'su root -c zypper -n install .*'
+        # But there is no way to ignore the order of the parameters, so only
+        # check the return value.
+        self.mock_cmd_run(mox.IgnoreArg()).AndReturn(FakePOpen(
+            returncode=0))
+
+        self.m.ReplayAll()
+        packages = {
+            "zypper": {
+                "mysql-server": [],
+                "httpd": [],
+                "wordpress": []
+            }
+        }
+
+        cfn_helper.PackagesHandler(packages).apply_packages()
+        self.m.VerifyAll()
+
+    def test_apt_install(self):
+        # This mock call corresponding to
+        # 'DEBIAN_FRONTEND=noninteractive su root -c apt-get -y install .*'
+        # But there is no way to ignore the order of the parameters, so only
+        # check the return value.
+        self.mock_cmd_run(mox.IgnoreArg()).AndReturn(FakePOpen(
+            returncode=0))
         self.m.ReplayAll()
 
         packages = {
@@ -129,52 +164,54 @@ class TestPackages(MockPopenTestCase):
 class TestServicesHandler(MockPopenTestCase):
 
     def test_services_handler_systemd(self):
+        self.m.StubOutWithMock(os.path, 'exists')
+        os.path.exists('/bin/systemctl').MultipleTimes().AndReturn(True)
         # apply_services
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl enable httpd.service']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl status httpd.service']
         ).AndReturn(FakePOpen(returncode=-1))
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl start httpd.service']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl enable mysqld.service']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl status mysqld.service']
         ).AndReturn(FakePOpen(returncode=-1))
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl start mysqld.service']
         ).AndReturn(FakePOpen())
 
         # monitor_services not running
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl status httpd.service']
         ).AndReturn(FakePOpen(returncode=-1))
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl start httpd.service']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/services_restarted']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl status mysqld.service']
         ).AndReturn(FakePOpen(returncode=-1))
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl start mysqld.service']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/services_restarted']
         ).AndReturn(FakePOpen())
 
         # monitor_services running
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl status httpd.service']
         ).AndReturn(FakePOpen())
 
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl status mysqld.service']
         ).AndReturn(FakePOpen())
 
@@ -205,23 +242,25 @@ class TestServicesHandler(MockPopenTestCase):
         self.m.VerifyAll()
 
     def test_services_handler_systemd_disabled(self):
+        self.m.StubOutWithMock(os.path, 'exists')
+        os.path.exists('/bin/systemctl').MultipleTimes().AndReturn(True)
         # apply_services
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl disable httpd.service']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl status httpd.service']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl stop httpd.service']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl disable mysqld.service']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl status mysqld.service']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
+        self.mock_unorder_cmd_run(
             ['su', 'root', '-c', '/bin/systemctl stop mysqld.service']
         ).AndReturn(FakePOpen())
 
@@ -246,7 +285,11 @@ class TestServicesHandler(MockPopenTestCase):
 
         self.m.VerifyAll()
 
-    def test_services_handler_sysv(self):
+    def test_services_handler_sysv_service_chkconfig(self):
+        self.m.StubOutWithMock(os.path, 'exists')
+        os.path.exists('/bin/systemctl').MultipleTimes().AndReturn(False)
+        os.path.exists('/sbin/service').MultipleTimes().AndReturn(True)
+        os.path.exists('/sbin/chkconfig').MultipleTimes().AndReturn(True)
         # apply_services
         self.mock_cmd_run(
             ['su', 'root', '-c', '/sbin/chkconfig httpd on']
@@ -256,15 +299,6 @@ class TestServicesHandler(MockPopenTestCase):
         ).AndReturn(FakePOpen(returncode=-1))
         self.mock_cmd_run(
             ['su', 'root', '-c', '/sbin/service httpd start']
-        ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
-            ['su', 'root', '-c', '/sbin/chkconfig mysqld on']
-        ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
-            ['su', 'root', '-c', '/sbin/service mysqld status']
-        ).AndReturn(FakePOpen(returncode=-1))
-        self.mock_cmd_run(
-            ['su', 'root', '-c', '/sbin/service mysqld start']
         ).AndReturn(FakePOpen())
 
         # monitor_services not running
@@ -277,30 +311,16 @@ class TestServicesHandler(MockPopenTestCase):
         self.mock_cmd_run(
             ['su', 'root', '-c', '/bin/services_restarted']
         ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
-            ['su', 'root', '-c', '/sbin/service mysqld status']
-        ).AndReturn(FakePOpen(returncode=-1))
-        self.mock_cmd_run(
-            ['su', 'root', '-c', '/sbin/service mysqld start']
-        ).AndReturn(FakePOpen())
-        self.mock_cmd_run(
-            ['su', 'root', '-c', '/bin/services_restarted']
-        ).AndReturn(FakePOpen())
 
         # monitor_services running
         self.mock_cmd_run(
             ['su', 'root', '-c', '/sbin/service httpd status']
         ).AndReturn(FakePOpen())
 
-        self.mock_cmd_run(
-            ['su', 'root', '-c', '/sbin/service mysqld status']
-        ).AndReturn(FakePOpen())
-
         self.m.ReplayAll()
 
         services = {
             "sysvinit": {
-                "mysqld": {"enabled": "true", "ensureRunning": "true"},
                 "httpd": {"enabled": "true", "ensureRunning": "true"}
             }
         }
@@ -322,7 +342,11 @@ class TestServicesHandler(MockPopenTestCase):
 
         self.m.VerifyAll()
 
-    def test_services_handler_sysv_disabled(self):
+    def test_services_handler_sysv_disabled_service_chkconfig(self):
+        self.m.StubOutWithMock(os.path, 'exists')
+        os.path.exists('/bin/systemctl').MultipleTimes().AndReturn(False)
+        os.path.exists('/sbin/service').MultipleTimes().AndReturn(True)
+        os.path.exists('/sbin/chkconfig').MultipleTimes().AndReturn(True)
         # apply_services
         self.mock_cmd_run(
             ['su', 'root', '-c', '/sbin/chkconfig httpd off']
@@ -333,21 +357,193 @@ class TestServicesHandler(MockPopenTestCase):
         self.mock_cmd_run(
             ['su', 'root', '-c', '/sbin/service httpd stop']
         ).AndReturn(FakePOpen())
+
+        self.m.ReplayAll()
+
+        services = {
+            "sysvinit": {
+                "httpd": {"enabled": "false", "ensureRunning": "false"}
+            }
+        }
+        hooks = [
+            cfn_helper.Hook(
+                'hook1',
+                'service.restarted',
+                'Resources.resource1.Metadata',
+                'root',
+                '/bin/services_restarted')
+        ]
+        sh = cfn_helper.ServicesHandler(services, 'resource1', hooks)
+        sh.apply_services()
+
+        self.m.VerifyAll()
+
+    def test_services_handler_sysv_systemctl(self):
+        self.m.StubOutWithMock(os.path, 'exists')
+        os.path.exists('/bin/systemctl').MultipleTimes().AndReturn(True)
+        # apply_services
         self.mock_cmd_run(
-            ['su', 'root', '-c', '/sbin/chkconfig mysqld off']
+            ['su', 'root', '-c', '/bin/systemctl enable httpd.service']
         ).AndReturn(FakePOpen())
         self.mock_cmd_run(
-            ['su', 'root', '-c', '/sbin/service mysqld status']
+            ['su', 'root', '-c', '/bin/systemctl status httpd.service']
+        ).AndReturn(FakePOpen(returncode=-1))
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/bin/systemctl start httpd.service']
+        ).AndReturn(FakePOpen())
+
+        # monitor_services not running
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/bin/systemctl status httpd.service']
+        ).AndReturn(FakePOpen(returncode=-1))
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/bin/systemctl start httpd.service']
         ).AndReturn(FakePOpen())
         self.mock_cmd_run(
-            ['su', 'root', '-c', '/sbin/service mysqld stop']
+            ['su', 'root', '-c', '/bin/services_restarted']
+        ).AndReturn(FakePOpen())
+
+        # monitor_services running
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/bin/systemctl status httpd.service']
         ).AndReturn(FakePOpen())
 
         self.m.ReplayAll()
 
         services = {
             "sysvinit": {
-                "mysqld": {"enabled": "false", "ensureRunning": "false"},
+                "httpd": {"enabled": "true", "ensureRunning": "true"}
+            }
+        }
+        hooks = [
+            cfn_helper.Hook(
+                'hook1',
+                'service.restarted',
+                'Resources.resource1.Metadata',
+                'root',
+                '/bin/services_restarted')
+        ]
+        sh = cfn_helper.ServicesHandler(services, 'resource1', hooks)
+        sh.apply_services()
+        # services not running
+        sh.monitor_services()
+
+        # services running
+        sh.monitor_services()
+
+        self.m.VerifyAll()
+
+    def test_services_handler_sysv_disabled_systemctl(self):
+        self.m.StubOutWithMock(os.path, 'exists')
+        os.path.exists('/bin/systemctl').MultipleTimes().AndReturn(True)
+        # apply_services
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/bin/systemctl disable httpd.service']
+        ).AndReturn(FakePOpen())
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/bin/systemctl status httpd.service']
+        ).AndReturn(FakePOpen())
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/bin/systemctl stop httpd.service']
+        ).AndReturn(FakePOpen())
+
+        self.m.ReplayAll()
+
+        services = {
+            "sysvinit": {
+                "httpd": {"enabled": "false", "ensureRunning": "false"}
+            }
+        }
+        hooks = [
+            cfn_helper.Hook(
+                'hook1',
+                'service.restarted',
+                'Resources.resource1.Metadata',
+                'root',
+                '/bin/services_restarted')
+        ]
+        sh = cfn_helper.ServicesHandler(services, 'resource1', hooks)
+        sh.apply_services()
+
+        self.m.VerifyAll()
+
+    def test_services_handler_sysv_service_updaterc(self):
+        self.m.StubOutWithMock(os.path, 'exists')
+        os.path.exists('/bin/systemctl').MultipleTimes().AndReturn(False)
+        os.path.exists('/sbin/service').MultipleTimes().AndReturn(False)
+        os.path.exists('/sbin/chkconfig').MultipleTimes().AndReturn(False)
+        # apply_services
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/usr/sbin/update-rc.d httpd enable']
+        ).AndReturn(FakePOpen())
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/usr/sbin/service httpd status']
+        ).AndReturn(FakePOpen(returncode=-1))
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/usr/sbin/service httpd start']
+        ).AndReturn(FakePOpen())
+
+        # monitor_services not running
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/usr/sbin/service httpd status']
+        ).AndReturn(FakePOpen(returncode=-1))
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/usr/sbin/service httpd start']
+        ).AndReturn(FakePOpen())
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/bin/services_restarted']
+        ).AndReturn(FakePOpen())
+
+        # monitor_services running
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/usr/sbin/service httpd status']
+        ).AndReturn(FakePOpen())
+
+        self.m.ReplayAll()
+
+        services = {
+            "sysvinit": {
+                "httpd": {"enabled": "true", "ensureRunning": "true"}
+            }
+        }
+        hooks = [
+            cfn_helper.Hook(
+                'hook1',
+                'service.restarted',
+                'Resources.resource1.Metadata',
+                'root',
+                '/bin/services_restarted')
+        ]
+        sh = cfn_helper.ServicesHandler(services, 'resource1', hooks)
+        sh.apply_services()
+        # services not running
+        sh.monitor_services()
+
+        # services running
+        sh.monitor_services()
+
+        self.m.VerifyAll()
+
+    def test_services_handler_sysv_disabled_service_updaterc(self):
+        self.m.StubOutWithMock(os.path, 'exists')
+        os.path.exists('/bin/systemctl').MultipleTimes().AndReturn(False)
+        os.path.exists('/sbin/service').MultipleTimes().AndReturn(False)
+        os.path.exists('/sbin/chkconfig').MultipleTimes().AndReturn(False)
+        # apply_services
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/usr/sbin/update-rc.d httpd disable']
+        ).AndReturn(FakePOpen())
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/usr/sbin/service httpd status']
+        ).AndReturn(FakePOpen())
+        self.mock_cmd_run(
+            ['su', 'root', '-c', '/usr/sbin/service httpd stop']
+        ).AndReturn(FakePOpen())
+
+        self.m.ReplayAll()
+
+        services = {
+            "sysvinit": {
                 "httpd": {"enabled": "false", "ensureRunning": "false"}
             }
         }
@@ -819,7 +1015,7 @@ class TestMetadataRetrieve(testtools.TestCase):
 
             self.assertEqual(meta_in, meta_out)
 
-    def test_nova_meta_wget(self):
+    def test_nova_meta_curl(self):
         url = 'http://169.254.169.254/openstack/2012-08-10/meta_data.json'
         temp_home = tempfile.mkdtemp()
         cache_path = os.path.join(temp_home, 'meta_data.json')
@@ -849,7 +1045,7 @@ class TestMetadataRetrieve(testtools.TestCase):
 
         self.m.StubOutWithMock(subprocess, 'Popen')
         subprocess.Popen(['su', 'root', '-c',
-                          'wget -O %s %s' % (cache_path, url)],
+                          'curl -o %s %s' % (cache_path, url)],
                          cwd=None, env=None, stderr=-1, stdout=-1)\
                   .WithSideEffects(write_cache_file)\
                   .AndReturn(FakePOpen('Downloaded', '', 0))
@@ -861,7 +1057,7 @@ class TestMetadataRetrieve(testtools.TestCase):
         self.assertEqual(meta_in, meta_out)
         self.m.VerifyAll()
 
-    def test_nova_meta_wget_corrupt(self):
+    def test_nova_meta_curl_corrupt(self):
         url = 'http://169.254.169.254/openstack/2012-08-10/meta_data.json'
         temp_home = tempfile.mkdtemp()
         cache_path = os.path.join(temp_home, 'meta_data.json')
@@ -884,7 +1080,7 @@ class TestMetadataRetrieve(testtools.TestCase):
 
         self.m.StubOutWithMock(subprocess, 'Popen')
         subprocess.Popen(['su', 'root', '-c',
-                          'wget -O %s %s' % (cache_path, url)],
+                          'curl -o %s %s' % (cache_path, url)],
                          cwd=None, env=None, stderr=-1, stdout=-1)\
                   .WithSideEffects(write_cache_file)\
                   .AndReturn(FakePOpen('Downloaded', '', 0))
@@ -896,7 +1092,7 @@ class TestMetadataRetrieve(testtools.TestCase):
         self.assertEqual(None, meta_out)
         self.m.VerifyAll()
 
-    def test_nova_meta_wget_failed(self):
+    def test_nova_meta_curl_failed(self):
         url = 'http://169.254.169.254/openstack/2012-08-10/meta_data.json'
         temp_home = tempfile.mkdtemp()
         cache_path = os.path.join(temp_home, 'meta_data.json')
@@ -910,7 +1106,7 @@ class TestMetadataRetrieve(testtools.TestCase):
 
         self.m.StubOutWithMock(subprocess, 'Popen')
         subprocess.Popen(['su', 'root', '-c',
-                          'wget -O %s %s' % (cache_path, url)],
+                          'curl -o %s %s' % (cache_path, url)],
                          cwd=None, env=None, stderr=-1, stdout=-1)\
                   .AndReturn(FakePOpen('Failed', '', 1))
 
@@ -1034,10 +1230,10 @@ class TestSourcesHandler(MockPopenTestCase):
         td = os.path.dirname(end_file)
         self.m.StubOutWithMock(tempfile, 'mkdtemp')
         tempfile.mkdtemp().AndReturn(td)
-        er = "mkdir -p '%s'; cd '%s'; wget -q -O - '%s' | gunzip | tar -xvf -"
+        er = "mkdir -p '%s'; cd '%s'; curl -s '%s' | gunzip | tar -xvf -"
         cmd = ['su', 'root', '-c',
                er % (dest, dest, url)]
-        self.mock_cmd_run(cmd).AndReturn(FakePOpen('Wget good'))
+        self.mock_cmd_run(cmd).AndReturn(FakePOpen('Curl good'))
         self.m.ReplayAll()
         sh = cfn_helper.SourcesHandler(sources)
         sh.apply_sources()
@@ -1058,7 +1254,7 @@ class TestSourcesHandler(MockPopenTestCase):
 
     def test_apply_source_cmd(self):
         sh = cfn_helper.SourcesHandler({})
-        er = "mkdir -p '%s'; cd '%s'; wget -q -O - '%s' | %s | tar -xvf -"
+        er = "mkdir -p '%s'; cd '%s'; curl -s '%s' | %s | tar -xvf -"
         dest = '/tmp'
         # test tgz
         url = 'http://www.example.com/a.tgz'
@@ -1085,7 +1281,7 @@ class TestSourcesHandler(MockPopenTestCase):
         cmd = sh._apply_source_cmd(dest, url)
         self.assertEqual(er % (dest, dest, url, "bunzip2"), cmd)
         # test zip
-        er = "mkdir -p '%s'; cd '%s'; wget -q -O '%s' '%s' && unzip -o '%s'"
+        er = "mkdir -p '%s'; cd '%s'; curl -s -o '%s' '%s' && unzip -o '%s'"
         url = 'http://www.example.com/a.zip'
         d = "/tmp/tmp2I0yNK"
         tmp = "%s/a.zip" % d
@@ -1095,7 +1291,7 @@ class TestSourcesHandler(MockPopenTestCase):
         cmd = sh._apply_source_cmd(dest, url)
         self.assertEqual(er % (dest, dest, tmp, url, tmp), cmd)
         # test gz
-        er = "mkdir -p '%s'; cd '%s'; wget -q -O - '%s' | %s > '%s'"
+        er = "mkdir -p '%s'; cd '%s'; curl -s '%s' | %s > '%s'"
         url = 'http://www.example.com/a.sh.gz'
         cmd = sh._apply_source_cmd(dest, url)
         self.assertEqual(er % (dest, dest, url, "gunzip", "a.sh"), cmd)

@@ -1,3 +1,14 @@
+heat-cfntools (1.2.8-1) UNRELEASED; urgency=medium
+
+  [ gustavo panizzo ]
+  * New upstream release.
+  * Standards Version updated. No changes needed.
+
+  [ Ondřej Nový ]
+  * Fixed VCS URLs (https).
+
+ -- gustavo panizzo <gfa@zumbi.com.ar>  Fri, 29 Aug 2014 11:55:41 -0300
+
 heat-cfntools (1.2.7-2) unstable; urgency=medium
 
   * Added missing /usr/lib/python* in the package (Closes: #771809).

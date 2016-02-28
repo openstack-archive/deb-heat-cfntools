@@ -18,8 +18,8 @@ Build-Depends-Indep: python-boto (>= 2.12.0),
                      subunit (>= 0.0.18),
                      testrepository (>= 0.0.18)
 Standards-Version: 3.9.5
-Vcs-Browser: http://anonscm.debian.org/gitweb/?p=openstack/heat-cfntools.git;a=summary
-Vcs-Git: git://anonscm.debian.org/openstack/heat-cfntools.git
+Vcs-Browser: https://anonscm.debian.org/cgit/openstack/heat-cfntools.git/
+Vcs-Git: https://anonscm.debian.org/git/openstack/heat-cfntools.git
 Homepage: https://wiki.openstack.org/Heat
 
 Package: heat-cfntools

@@ -6,6 +6,7 @@ heat-cfntools (1.2.8-1) UNRELEASED; urgency=medium
 
   [ Ondřej Nový ]
   * Fixed VCS URLs (https).
+  * d/copyright: Changed shortname: BSD -> BSD-3-clause
 
  -- gustavo panizzo <gfa@zumbi.com.ar>  Fri, 29 Aug 2014 11:55:41 -0300
 

@@ -12,9 +12,9 @@ License: Apache-2
 
 Files: doc/source/_static/nature.css
 Copyright: 2007-2011 by the Sphinx team
-License: BSD
+License: BSD-3-clause
 
-License: BSD
+License: BSD-3-clause
  Redistribution and use in source and binary forms, with or without
  modification, are permitted provided that the following conditions are met:
  .

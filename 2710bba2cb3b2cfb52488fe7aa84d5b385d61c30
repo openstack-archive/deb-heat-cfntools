@@ -1,0 +1,9 @@
+Code-Review+2: Kanagaraj Manickam <mkr1481@gmail.com>
+Code-Review+2: Zane Bitter <zbitter@redhat.com>
+Workflow+1: Zane Bitter <zbitter@redhat.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Tue, 22 Sep 2015 18:53:23 +0000
+Reviewed-on: https://review.openstack.org/222554
+Project: openstack/deb-heat-cfntools
+Branch: refs/heads/master

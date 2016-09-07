@@ -1,0 +1,10 @@
+Code-Review+2: Steven Hardy <shardy@redhat.com>
+Code-Review+1: Anant Patil <anant.patil@hpe.com>
+Code-Review+2: Steve Baker <sbaker@redhat.com>
+Workflow+1: Steve Baker <sbaker@redhat.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 10 Sep 2015 04:31:17 +0000
+Reviewed-on: https://review.openstack.org/220329
+Project: openstack/deb-heat-cfntools
+Branch: refs/heads/master

@@ -1,0 +1,12 @@
+Code-Review+1: Anusha Ramineni <anusha.ramineni@nectechnologies.in>
+Code-Review+1: Shu Muto <shu-mutou@rf.jp.nec.com>
+Code-Review+1: Ryan Brown <rybrown@redhat.com>
+Code-Review+2: Steven Hardy <shardy@redhat.com>
+Code-Review+2: Rabi Mishra <ramishra@redhat.com>
+Workflow+1: Rabi Mishra <ramishra@redhat.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Fri, 15 Jan 2016 10:07:43 +0000
+Reviewed-on: https://review.openstack.org/264076
+Project: openstack/deb-heat-cfntools
+Branch: refs/heads/master

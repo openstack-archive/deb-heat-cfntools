@@ -1,0 +1,9 @@
+Code-Review+2: Steven Hardy <shardy@redhat.com>
+Code-Review+2: Angus Salkeld <asalkeld@mirantis.com>
+Workflow+1: Angus Salkeld <asalkeld@mirantis.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 11 Dec 2014 11:59:16 +0000
+Reviewed-on: https://review.openstack.org/141002
+Project: openstack/deb-heat-cfntools
+Branch: refs/heads/master

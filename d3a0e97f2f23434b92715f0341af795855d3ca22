@@ -1,0 +1,10 @@
+Code-Review+1: Jin Nan Zhang <zhang.jinnan@99cloud.net>
+Code-Review+1: Di XiaoLi <dixiaobj@cn.ibm.com>
+Code-Review+2: Steve Baker <sbaker@redhat.com>
+Workflow+1: Steve Baker <sbaker@redhat.com>
+Verified+2: Jenkins
+Submitted-by: Jenkins
+Submitted-at: Thu, 21 Jan 2016 19:29:09 +0000
+Reviewed-on: https://review.openstack.org/266432
+Project: openstack/deb-heat-cfntools
+Branch: refs/heads/master

@@ -1,4 +1,5 @@
 [gerrit]
 host=review.openstack.org
 port=29418
-project=openstack/heat-cfntools.git
+project=openstack/deb-heat-cfntools.git
+defaultbranch=debain/newton

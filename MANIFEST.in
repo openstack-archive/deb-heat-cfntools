@@ -1,7 +1,0 @@
-include CONTRIBUTING.rst
-include MANIFEST.in
-include README.rst
-include AUTHORS LICENSE
-include ChangeLog
-graft doc
-graft tools
